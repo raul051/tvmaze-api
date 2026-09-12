@@ -9,4 +9,5 @@ import java.util.List;
 public interface CommentRepository extends MongoRepository<CommentDocument, String> {
 
     List<CommentDocument> findByShowIdIn(Collection<Long> showIds);
+    List<CommentDocument> findByShowId(Long showId);
 }

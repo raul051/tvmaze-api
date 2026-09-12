@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.LinkedHashMap;
 
 @Service
 public class ShowService {
@@ -95,7 +96,7 @@ public class ShowService {
     }
 
     public Map<String, Object> getShowById(Long showId) {
-        return showRepository.findById(showId)
+        Map<String, Object> showData = showRepository.findById(showId)
                 .map(showDocument -> {
                     log.info("se encontro en Mongo", showId);
                     return showDocument.data();
@@ -111,6 +112,22 @@ public class ShowService {
 
                     return show;
                 });
+
+        List<CommentResponse> comments = commentRepository
+                .findByShowId(showId)
+                .stream()
+                .map(this::toCommentResponse)
+                .toList();
+
+        log.info(
+                "Se encontraron {} comentarios para el show {}",
+                comments.size(),
+                showId
+        );
+
+        Map<String, Object> response = new LinkedHashMap<>(showData);
+        response.put("comments", comments);
+        return response;
     }
 
     private CommentResponse toCommentResponse(CommentDocument comment) {
