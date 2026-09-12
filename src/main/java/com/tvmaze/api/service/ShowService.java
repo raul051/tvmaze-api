@@ -8,6 +8,7 @@ import com.tvmaze.api.dto.TvMazeShow;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class ShowService {
@@ -50,5 +51,9 @@ public class ShowService {
         }
 
         return null;
+    }
+
+    public Map<String, Object> getShowById(Long showId) {
+        return tvMazeClient.getShowById(showId);
     }
 }
