@@ -7,12 +7,18 @@ import com.tvmaze.api.dto.TvMazeChannel;
 import com.tvmaze.api.dto.TvMazeSearchItem;
 import com.tvmaze.api.dto.TvMazeShow;
 import com.tvmaze.api.repository.ShowRepository;
+import com.tvmaze.api.document.CommentDocument;
+import com.tvmaze.api.dto.CommentResponse;
+import com.tvmaze.api.repository.CommentRepository;
+
 import org.springframework.stereotype.Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 public class ShowService {
@@ -21,27 +27,54 @@ public class ShowService {
 
     private final TvMazeClient tvMazeClient;
     private final ShowRepository showRepository;
+    private final CommentRepository commentRepository;
 
-    public ShowService( TvMazeClient tvMazeClient, ShowRepository showRepository) {
+    public ShowService(TvMazeClient tvMazeClient, ShowRepository showRepository, CommentRepository commentRepository) {
         this.tvMazeClient = tvMazeClient;
         this.showRepository = showRepository;
+        this.commentRepository = commentRepository;
     }
 
     public List<ShowSearchResponse> searchShows(String query) {
-        return tvMazeClient.searchShows(query)
+        List<TvMazeShow> shows = tvMazeClient.searchShows(query)
                 .stream()
                 .map(TvMazeSearchItem::show)
-                .map(this::toSearchResponse)
+                .toList();
+
+        List<Long> showIds = shows.stream()
+                .map(TvMazeShow::id)
+                .toList();
+
+        List<CommentDocument> comments =
+                commentRepository.findByShowIdIn(showIds);
+
+        Map<Long, List<CommentResponse>> commentsByShowId =
+                comments.stream().collect(Collectors.groupingBy(
+                                CommentDocument::showId,
+                                Collectors.mapping(
+                                        this::toCommentResponse,
+                                        Collectors.toList()
+                                )
+                        ));
+
+        return shows.stream()
+                .map(show -> toSearchResponse(show,
+                        commentsByShowId.getOrDefault(
+                                show.id(),
+                                List.of()
+                        )
+                ))
                 .toList();
     }
 
-    private ShowSearchResponse toSearchResponse(TvMazeShow show) {
+    private ShowSearchResponse toSearchResponse(TvMazeShow show, List<CommentResponse> comments) {
         return new ShowSearchResponse(
                 show.id(),
                 show.name(),
                 resolveChannel(show),
                 show.summary(),
-                show.genres()
+                show.genres(),
+                comments
         );
     }
 
@@ -80,4 +113,7 @@ public class ShowService {
                 });
     }
 
+    private CommentResponse toCommentResponse(CommentDocument comment) {
+        return new CommentResponse(comment.comment(),comment.rating());
+    }
 }

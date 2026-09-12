@@ -3,7 +3,10 @@ package com.tvmaze.api.repository;
 import com.tvmaze.api.document.CommentDocument;
 import org.springframework.data.mongodb.repository.MongoRepository;
 
-public interface CommentRepository
-        extends MongoRepository<CommentDocument, String> {
+import java.util.Collection;
+import java.util.List;
 
+public interface CommentRepository extends MongoRepository<CommentDocument, String> {
+
+    List<CommentDocument> findByShowIdIn(Collection<Long> showIds);
 }
